@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Trading Journal Pro</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Segoe UI,sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#0f172a,#1e293b);
+padding:20px;
+color:white;
+}
+
+h1{
+text-align:center;
+margin-bottom:20px;
+font-size:35px;
+}
+
+.dashboard{
+display:flex;
+gap:15px;
+flex-wrap:wrap;
+margin-bottom:20px;
+}
+
+.card{
+flex:1;
+min-width:220px;
+padding:20px;
+border-radius:15px;
+text-align:center;
+font-size:20px;
+font-weight:bold;
+box-shadow:0 5px 20px rgba(0,0,0,.3);
+}
+
+.profit{
+background:linear-gradient(135deg,#16a34a,#22c55e);
+}
+
+.loss{
+background:linear-gradient(135deg,#dc2626,#ef4444);
+}
+
+.net{
+background:linear-gradient(135deg,#2563eb,#3b82f6);
+}
+
+.controls{
+margin-bottom:20px;
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+
+button{
+padding:12px 20px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+font-size:15px;
+transition:.3s;
+}
+
+button:hover{
+transform:translateY(-2px);
+}
+
+.add{
+background:#22c55e;
+color:white;
+}
+
+.column{
+background:#f59e0b;
+color:white;
+}
+
+.save{
+background:#3b82f6;
+color:white;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+background:white;
+color:black;
+border-radius:15px;
+overflow:hidden;
+}
+
+th{
+background:#111827;
+color:white;
+padding:12px;
+}
+
+td{
+padding:8px;
+border:1px solid #ddd;
+}
+
+input{
+width:100%;
+padding:8px;
+border:none;
+outline:none;
+}
+
+.profitRow{
+background:#22c55e !important;
+color:white;
+font-weight:bold;
+}
+
+.lossRow{
+background:#ef4444 !important;
+color:white;
+font-weight:bold;
+}
+
+.gallery img{
+width:50px;
+height:50px;
+margin:3px;
+border-radius:8px;
+cursor:pointer;
+object-fit:cover;
+border:2px solid white;
+}
+
+.modal{
+display:none;
+position:fixed;
+z-index:999;
+left:0;
+top:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.9);
+}
+
+.modal img{
+display:block;
+margin:auto;
+margin-top:30px;
+max-width:90%;
+max-height:85%;
+border-radius:10px;
+}
+
+.close{
+position:absolute;
+right:25px;
+top:15px;
+font-size:40px;
+color:white;
+cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>📈 Trading Journal Pro</h1>
+
+<div class="dashboard">
+
+<div class="card profit">
+Total Profit
+<br>
+₹ <span id="totalProfit">0</span>
+</div>
+
+<div class="card loss">
+Total Loss
+<br>
+₹ <span id="totalLoss">0</span>
+</div>
+
+<div class="card net">
+Net P&L
+<br>
+₹ <span id="netPL">0</span>
+</div>
+
+</div>
+
+<div class="controls">
+
+<button class="add" onclick="addRow()">➕ Add Row</button>
+
+<button class="column" onclick="addColumn()">📋 Add Column</button>
+
+<button class="save" onclick="saveData()">💾 Save</button>
+
+</div>
+
+<table id="tradeTable">
+
+<thead>
+<tr>
+
+<th>Date</th>
+<th>Share Name</th>
+<th>Entry Time</th>
+<th>Quantity</th>
+<th>Entry Price</th>
+<th>Sell Price</th>
+<th>Sell Date</th>
+<th>Profit/Loss</th>
+<th>Remarks</th>
+<th>Photos</th>
+
+</tr>
+</thead>
+
+<tbody>
+
+<tr>
+
+<td><input type="date"></td>
+
+<td><input type="text"></td>
+
+<td><input type="time"></td>
+
+<td>
+<input type="number" value="1"
+oninput="calculatePL(this)">
+</td>
+
+<td>
+<input type="number"
+oninput="calculatePL(this)">
+</td>
+
+<td>
+<input type="number"
+oninput="calculatePL(this)">
+</td>
+
+<td><input type="date"></td>
+
+<td class="pl">0</td>
+
+<td><input type="text"></td>
+
+<td>
+
+<input type="file"
+multiple
+accept="image/*"
+onchange="uploadPhotos(this)">
+
+<div class="gallery"></div>
+
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+<div id="imageModal" class="modal">
+
+<span class="close"
+onclick="closeModal()">&times;</span>
+
+<img id="modalImage">
+
+</div>
+
+<script>
+
+function calculatePL(el){
+
+let row = el.closest("tr");
+
+let qty =
+parseFloat(
+row.cells[3].querySelector("input").value
+)||0;
+
+let buy =
+parseFloat(
+row.cells[4].querySelector("input").value
+)||0;
+
+let sell =
+parseFloat(
+row.cells[5].querySelector("input").value
+)||0;
+
+let pl = (sell-buy)*qty;
+
+row.cells[7].innerHTML =
+pl.toFixed(2);
+
+row.classList.remove(
+"profitRow",
+"lossRow"
+);
+
+if(pl>0){
+
+row.classList.add(
+"profitRow"
+);
+
+}
+else if(pl<0){
+
+row.classList.add(
+"lossRow"
+);
+
+}
+
+updateDashboard();
+}
+
+function updateDashboard(){
+
+let rows =
+document.querySelectorAll(
+"#tradeTable tbody tr"
+);
+
+let profit=0;
+let loss=0;
+
+rows.forEach(row=>{
+
+let value =
+parseFloat(
+row.cells[7].innerText
+)||0;
+
+if(value>0){
+
+profit+=value;
+
+}else{
+
+loss+=Math.abs(value);
+}
+
+});
+
+document.getElementById(
+"totalProfit"
+).innerHTML =
+profit.toFixed(2);
+
+document.getElementById(
+"totalLoss"
+).innerHTML =
+loss.toFixed(2);
+
+document.getElementById(
+"netPL"
+).innerHTML =
+(profit-loss).toFixed(2);
+
+}
+
+function addRow(){
+
+let tbody =
+document.querySelector(
+"#tradeTable tbody"
+);
+
+let row =
+tbody.insertRow();
+
+row.innerHTML=`
+
+<td><input type="date"></td>
+
+<td><input></td>
+
+<td><input type="time"></td>
+
+<td>
+<input type="number"
+value="1"
+oninput="calculatePL(this)">
+</td>
+
+<td>
+<input type="number"
+oninput="calculatePL(this)">
+</td>
+
+<td>
+<input type="number"
+oninput="calculatePL(this)">
+</td>
+
+<td><input type="date"></td>
+
+<td class="pl">0</td>
+
+<td><input></td>
+
+<td>
+
+<input type="file"
+multiple
+accept="image/*"
+onchange="uploadPhotos(this)">
+
+<div class="gallery"></div>
+
+</td>
+
+`;
+}
+
+function addColumn(){
+
+let name =
+prompt(
+"Enter Column Name"
+);
+
+if(!name) return;
+
+let table =
+document.getElementById(
+"tradeTable"
+);
+
+for(let i=0;
+i<table.rows.length;
+i++){
+
+let cell;
+
+if(i===0){
+
+cell =
+document.createElement(
+"th"
+);
+
+cell.innerHTML=name;
+
+}else{
+
+cell =
+document.createElement(
+"td"
+);
+
+cell.innerHTML=
+"<input>";
+}
+
+table.rows[i]
+.appendChild(cell);
+
+}
+}
+
+function uploadPhotos(input){
+
+let gallery =
+input.nextElementSibling;
+
+gallery.innerHTML="";
+
+Array.from(
+input.files
+).forEach(file=>{
+
+let reader =
+new FileReader();
+
+reader.onload=function(e){
+
+let img =
+document.createElement(
+"img"
+);
+
+img.src =
+e.target.result;
+
+img.onclick=function(){
+
+document
+.getElementById(
+"modalImage"
+).src=this.src;
+
+document
+.getElementById(
+"imageModal"
+).style.display=
+"block";
+};
+
+gallery.appendChild(
+img
+);
+
+};
+
+reader.readAsDataURL(
+file
+);
+
+});
+}
+
+function closeModal(){
+
+document
+.getElementById(
+"imageModal"
+).style.display=
+"none";
+}
+
+function saveData(){
+
+localStorage.setItem(
+"TradingJournalHTML",
+document
+.getElementById(
+"tradeTable"
+).outerHTML
+);
+
+alert(
+"Data Saved Successfully"
+);
+}
+
+window.onload=function(){
+
+let saved =
+localStorage.getItem(
+"TradingJournalHTML"
+);
+
+if(saved){
+
+document
+.getElementById(
+"tradeTable"
+).outerHTML=saved;
+
+}
+
+updateDashboard();
+
+};
+
+</script>
+
+</body>
+</html>
